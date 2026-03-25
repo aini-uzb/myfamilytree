@@ -2,11 +2,11 @@
 //  Family Tree App — Auth, Multi-Tree, Auto-Save, Simple Lines
 // ============================================================
 
-let supabase = null;
+let supabaseClient = null;
 try {
   const supabaseUrl = 'https://ahqhqyevzqpjnaoqnfoj.supabase.co';
   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFocWhxeWV2enFwam5hb3FuZm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjIzNzgsImV4cCI6MjA5MDAzODM3OH0.de8h1RR3ATHyEJtM89ZOZfvpAeEhTXuk4CcPKgors6Q';
-  supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 } catch (e) {
   console.error("Supabase failed to load. Are you opening index.html directly from your folders instead of localhost?", e);
   setTimeout(() => alert("Error: Database connection blocked! Please open this site using http://localhost:3000 to unblock the database."), 1000);
@@ -175,7 +175,7 @@ registerForm.addEventListener("submit", async (e) => {
   }
   if (password !== confirm) { showMsg(registerMessage, "error", "Passwords do not match."); return; }
 
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabaseClient.auth.signUp({ email, password });
 
   if (error) {
     showMsg(registerMessage, "error", error.message);
@@ -184,7 +184,7 @@ registerForm.addEventListener("submit", async (e) => {
 
   // Insert into profiles
   if (data.user) {
-    await supabase.from('profiles').insert({ id: data.user.id, username: username });
+    await supabaseClient.from('profiles').insert({ id: data.user.id, username: username });
   }
 
   currentUser = username;
@@ -203,7 +203,7 @@ loginForm.addEventListener("submit", async (e) => {
 
   if (!email || !password) { showMsg(loginMessage, "error", "Please fill in all fields."); return; }
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
   if (error) {
     showMsg(loginMessage, "error", "Invalid email or password.");
@@ -211,7 +211,7 @@ loginForm.addEventListener("submit", async (e) => {
   }
 
   // Pull the username from profiles to display on the dashboard
-  const { data: profile } = await supabase.from('profiles').select('username').eq('id', data.user.id).single();
+  const { data: profile } = await supabaseClient.from('profiles').select('username').eq('id', data.user.id).single();
   currentUser = profile ? profile.username : email.split('@')[0];
 
   loginForm.reset();
@@ -223,7 +223,7 @@ loginForm.addEventListener("submit", async (e) => {
 // ==================== Logout ====================
 
 sidebarLogout.addEventListener("click", async () => {
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
   currentUser = null;
   userData = null;
   activeTreeId = null;
@@ -250,7 +250,7 @@ newTreeForm.addEventListener("submit", async (e) => {
   if (!name) { showMsg(newTreeMessage, "error", "Please enter a tree name."); return; }
   if (!familyName) { showMsg(newTreeMessage, "error", "Please enter the family surname."); return; }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
 
   const tree = {
     id: uuidv4(),
@@ -260,7 +260,7 @@ newTreeForm.addEventListener("submit", async (e) => {
   };
 
   // Push physical tree to Supabase
-  await supabase.from('trees').insert({
+  await supabaseClient.from('trees').insert({
     id: tree.id,
     user_id: user.id,
     family_name: `${name}|||${familyName}` // Serialized to bypass strict schema constraints
@@ -390,7 +390,7 @@ fnSaveBtn.addEventListener("click", async () => {
   const newFn = familyNameInput.value.trim();
   tree.familyName = newFn;
 
-  await supabase.from('trees').update({
+  await supabaseClient.from('trees').update({
     family_name: `${tree.name}|||${tree.familyName}`
   }).eq('id', tree.id);
 
@@ -417,7 +417,7 @@ async function autoSave() {
   }));
 
   if (payloads.length > 0) {
-    await supabase.from('members').upsert(payloads);
+    await supabaseClient.from('members').upsert(payloads);
   }
 }
 
@@ -583,7 +583,7 @@ menuDelete.addEventListener("click", async () => {
   if (!confirm(`Delete "${nameToUse}"? This cannot be undone.`)) return;
 
   // Delete from Postgres Backend
-  await supabase.from('members').delete().eq('id', id);
+  await supabaseClient.from('members').delete().eq('id', id);
 
   clearSpouse(id);
   tree.members.forEach(m => { if (m.parentId === id) m.parentId = null; });
@@ -612,7 +612,7 @@ menuEditTreeName.addEventListener("click", async () => {
   if (newName && newName.trim().length > 0) {
     tree.name = newName.trim();
 
-    await supabase.from('trees').update({
+    await supabaseClient.from('trees').update({
       family_name: `${tree.name}|||${tree.familyName || ""}`
     }).eq('id', tree.id);
 
@@ -641,7 +641,7 @@ menuDeleteTree.addEventListener("click", async () => {
     return;
   }
 
-  await supabase.from('trees').delete().eq('id', tree.id);
+  await supabaseClient.from('trees').delete().eq('id', tree.id);
 
   const idx = userData.trees.findIndex(x => String(x.id) === String(id));
   if (idx !== -1) {
@@ -1444,11 +1444,11 @@ window.addEventListener("resize", scheduleDrawLines);
 // ==================== Supabase Sync Engine ====================
 
 async function fetchUserData() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return;
 
-  const { data: treesData } = await supabase.from('trees').select('*').eq('user_id', user.id);
-  const { data: membersData } = await supabase.from('members').select('*'); // RLS automatically filters
+  const { data: treesData } = await supabaseClient.from('trees').select('*').eq('user_id', user.id);
+  const { data: membersData } = await supabaseClient.from('members').select('*'); // RLS automatically filters
 
   userData = { trees: [] };
 
@@ -1483,11 +1483,11 @@ async function fetchUserData() {
 // ==================== Init ====================
 
 (async function init() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
 
   if (session && session.user) {
     // If we have an active session, pull profiles for display username
-    const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+    const { data: profile } = await supabaseClient.from('profiles').select('username').eq('id', session.user.id).single();
     currentUser = profile ? profile.username : session.user.email.split('@')[0];
 
     await fetchUserData();
