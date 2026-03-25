@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Family Tree</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Create, manage and visualize your family trees. Register your private account and build beautiful family trees." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- ==================== AUTH PAGE ==================== -->
+  <section class="auth-page" id="auth-page">
+    <div class="auth-card">
+      <h1 class="auth-logo">🌳 Family Tree</h1>
+      <p class="auth-tagline">Your private family history, beautifully organized.</p>
+
+      <!-- Tab switcher -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" type="button">Log In</button>
+        <button class="auth-tab" id="tab-register" type="button">Register</button>
+      </div>
+
+      <!-- Login form -->
+      <form class="auth-form" id="login-form">
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="Enter your email address" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="Enter your password" required
+            autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn-primary btn-full">Log In</button>
+        <p id="login-message" class="form-message" aria-live="polite"></p>
+      </form>
+
+      <!-- Register form -->
+      <form class="auth-form hidden" id="register-form">
+        <div class="form-group">
+          <label for="register-email">Email</label>
+          <input type="email" id="register-email" placeholder="Enter your email address" required
+            autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="register-username">Display Username</label>
+          <input type="text" id="register-username" placeholder="Choose a username" required autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label for="register-password">Password</label>
+          <input type="password" id="register-password" placeholder="Create a password" required
+            autocomplete="new-password" />
+        </div>
+        <div class="form-group">
+          <label for="register-confirm">Confirm Password</label>
+          <input type="password" id="register-confirm" placeholder="Confirm your password" required
+            autocomplete="new-password" />
+        </div>
+        <button type="submit" class="btn-primary btn-full">Create Account</button>
+        <p id="register-message" class="form-message" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ==================== WELCOME PAGE ==================== -->
+  <section class="welcome-page hidden" id="welcome-page">
+    <div class="welcome-card">
+      <div class="welcome-emoji">🎉</div>
+      <h1 class="welcome-title">Welcome, <span id="welcome-name"></span>!</h1>
+      <p class="welcome-text">
+        Your account has been created successfully. Start by creating your first family tree — give it a name and begin
+        building your family history.
+      </p>
+      <button type="button" class="btn-primary btn-large" id="welcome-create-btn">
+        🌳 Create Your Family Tree
+      </button>
+    </div>
+  </section>
+
+  <!-- ==================== NEW TREE PAGE ==================== -->
+  <section class="new-tree-page hidden" id="new-tree-page">
+    <div class="new-tree-card">
+      <h2>Create Your Family Tree</h2>
+      <p class="new-tree-hint">Give your tree a name and set the family surname that will apply to every member.</p>
+      <form id="new-tree-form" class="form">
+        <div class="form-group">
+          <label for="new-tree-name">Tree Name</label>
+          <input type="text" id="new-tree-name" placeholder='e.g. "Main Family"' required />
+        </div>
+        <div class="form-group">
+          <label for="new-tree-family">Family Name (Surname)</label>
+          <input type="text" id="new-tree-family" placeholder='e.g. "Hakimov"' required />
+          <small class="hint">For females, an "a" will be added automatically (e.g. Hakimova).</small>
+        </div>
+        <div class="new-tree-actions">
+          <button type="button" class="btn-secondary" id="new-tree-cancel">Cancel</button>
+          <button type="submit" class="btn-primary">Create Tree</button>
+        </div>
+        <p id="new-tree-message" class="form-message" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ==================== DASHBOARD ==================== -->
+  <section class="dashboard hidden" id="dashboard">
+
+    <!-- Thin left sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">🌳</span>
+        <span class="sidebar-title">Trees</span>
+      </div>
+      <div class="sidebar-list" id="sidebar-tree-list">
+        <!-- Tree items injected by JS -->
+      </div>
+      <button type="button" class="sidebar-new-btn" id="sidebar-new-tree">+ New Tree</button>
+      <div class="sidebar-footer">
+        <span class="sidebar-user" id="sidebar-username"></span>
+        <button type="button" class="sidebar-logout" id="sidebar-logout">Log out</button>
+      </div>
+    </aside>
+
+    <!-- Main content area -->
+    <div class="main-content" id="main-content">
+
+      <!-- Tree view (add + tree) -->
+      <div class="main-views" id="tree-view">
+        <header class="main-header">
+          <h1 id="tree-title">Family Tree</h1>
+          <div class="family-name-bar">
+            <label for="family-name-input">Family Surname</label>
+            <div class="family-name-row">
+              <input type="text" id="family-name-input" class="family-name-input"
+                placeholder="Enter family surname (e.g. Hakimov)" readonly />
+              <button type="button" class="btn-fn btn-fn-edit" id="fn-edit-btn">✏️ Edit</button>
+              <button type="button" class="btn-fn btn-fn-save hidden" id="fn-save-btn">💾 Save</button>
+            </div>
+            <small class="hint">This surname applies to all members. Females get "a" appended automatically.</small>
+          </div>
+        </header>
+
+        <div class="main-panels">
+          <!-- Tree display -->
+          <section class="card tree-card" id="tree-panel">
+            <h2>Family Tree</h2>
+
+            <!-- SEARCH BAR -->
+            <div class="search-bar-container">
+              <input type="text" id="tree-search-input" class="search-input" placeholder="Search by full name..." />
+              <button type="button" class="btn-secondary" id="tree-search-btn">Search</button>
+            </div>
+
+            <div class="tree-scroll" id="tree-scroll">
+              <div class="tree-canvas" id="tree-canvas">
+                <svg class="connections-layer" id="connections-layer" aria-hidden="true"></svg>
+                <div id="tree-root" class="tree-root"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Person detail view -->
+      <div class="person-page hidden" id="person-panel">
+        <div class="person-header">
+          <button type="button" class="btn-secondary" id="back-to-tree">← Back to tree</button>
+          <div>
+            <h2 class="person-title">Person Details</h2>
+            <p class="person-subtitle">Edit the person's information and save changes.</p>
+          </div>
+        </div>
+
+        <div class="person-layout">
+          <!-- LEFT: Edit Panel -->
+          <div class="card person-edit-panel">
+            <h3>Edit Information</h3>
+            <form id="person-form" class="form">
+              <div class="form-group">
+                <label for="person-fullname">Full Name</label>
+                <input type="text" id="person-fullname" required />
+                <small class="hint">The member's full name.</small>
+              </div>
+              <div class="form-group">
+                <label for="person-birthday">Birthday</label>
+                <input type="date" id="person-birthday" />
+              </div>
+              <div class="form-group row-group" style="display: flex; gap: 10px; align-items: center;">
+                <div style="flex: 1;">
+                  <label for="person-deathdate">Death Date (Optional)</label>
+                  <input type="date" id="person-deathdate" />
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 18px;">
+                  <input type="checkbox" id="person-death-unknown" style="width: auto; margin: 0;" />
+                  <label for="person-death-unknown"
+                    style="margin: 0; font-size: 0.9rem; font-weight: normal; cursor: pointer;">Unknown</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="person-spouse">Spouse</label>
+                <select id="person-spouse"></select>
+              </div>
+              <div class="form-group">
+                <label for="person-additional">Additional Information</label>
+                <textarea id="person-additional" rows="4" placeholder="Write anything about this person..."></textarea>
+              </div>
+              <div class="person-actions">
+                <button type="submit" class="btn-primary">Save Changes</button>
+                <button type="button" class="btn-danger" id="delete-member-btn">Delete Member</button>
+              </div>
+              <p id="person-message" class="form-message" aria-live="polite"></p>
+            </form>
+          </div>
+
+          <!-- RIGHT: Info Panel -->
+          <div class="card person-info-panel">
+            <h3>About This Person</h3>
+            <div class="info-stroke-list">
+              <div class="info-stroke">
+                <span class="info-stroke-label">Full Name</span>
+                <p class="info-stroke-content" id="info-fullname">--</p>
+              </div>
+              <div class="info-stroke">
+                <span class="info-stroke-label">Gender</span>
+                <p class="info-stroke-content" id="info-gender">--</p>
+              </div>
+              <div class="info-stroke">
+                <span class="info-stroke-label">Birthday &amp; Age</span>
+                <p class="info-stroke-content" id="info-age">--</p>
+              </div>
+              <div class="info-stroke">
+                <span class="info-stroke-label">Additional Information</span>
+                <p class="info-stroke-content info-stroke-multiline" id="info-additional">No additional information yet.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+  <!-- ==================== CONTEXT MENU ==================== -->
+  <div id="context-menu" class="context-menu hidden">
+    <button class="menu-item" id="menu-add-child">Add Child</button>
+    <button class="menu-item" id="menu-add-spouse">Add Spouse</button>
+    <div class="menu-divider"></div>
+    <button class="menu-item danger" id="menu-delete">Delete Member</button>
+  </div>
+
+  <div id="tree-context-menu" class="context-menu hidden">
+    <button class="menu-item" id="menu-edit-tree-name">Edit Name</button>
+    <div class="menu-divider"></div>
+    <button class="menu-item danger" id="menu-delete-tree">Delete Tree</button>
+  </div>
+
+  <!-- ==================== ADD MEMBER MODAL ==================== -->
+  <div id="add-modal-overlay" class="modal-overlay hidden">
+    <div class="modal-content card">
+      <h2 id="modal-title">Add Family Member</h2>
+      <button type="button" class="modal-close" id="modal-close-btn">&times;</button>
+      <form id="add-member-form" class="form">
+        <input type="hidden" id="modal-action-type" />
+        <input type="hidden" id="modal-target-id" />
+
+        <div class="form-group">
+          <label for="member-fullname">Full Name</label>
+          <input type="text" id="member-fullname" placeholder="Enter full name" required />
+        </div>
+        <div class="form-group">
+          <label for="member-gender">Gender</label>
+          <select id="member-gender">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary" style="margin-top: 10px;">Add Member</button>
+        <p id="form-message" class="form-message" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
