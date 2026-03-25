@@ -160,13 +160,13 @@ tabRegister.addEventListener("click", () => {
 registerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = $("register-email").value.trim();
-  const username = $("register-username").value.trim();
+  const username = $("register-account-name").value.trim();
   const password = $("register-password").value;
   const confirm = $("register-confirm").value;
 
   if (!email) { showMsg(registerMessage, "error", "Email is required."); return; }
-  if (!username) { showMsg(registerMessage, "error", "Username is required."); return; }
-  if (username.length < 3) { showMsg(registerMessage, "error", "Username must be at least 3 characters."); return; }
+  if (!username) { showMsg(registerMessage, "error", "Account Name is required."); return; }
+  if (username.length < 3) { showMsg(registerMessage, "error", "Account Name must be at least 3 characters."); return; }
   if (!password) { showMsg(registerMessage, "error", "Password is required."); return; }
   if (password.length < 8) { showMsg(registerMessage, "error", "Password must be at least 8 characters."); return; }
   if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {

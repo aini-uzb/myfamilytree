@@ -22,49 +22,49 @@
       <h1 class="auth-logo">🌳 Family Tree</h1>
       <p class="auth-tagline">Your private family history, beautifully organized.</p>
 
-      <!-- Tab switcher -->
+      <!-- Tab switcher (The "Bars" next to each other) -->
       <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login" type="button">Log In</button>
-        <button class="auth-tab" id="tab-register" type="button">Register</button>
+        <button class="auth-tab active" id="tab-login" type="button" aria-label="Log In Tab">Log In</button>
+        <button class="auth-tab" id="tab-register" type="button" aria-label="Register Tab">Register</button>
       </div>
 
       <!-- Login form -->
       <form class="auth-form" id="login-form">
         <div class="form-group">
-          <label for="login-email">Email</label>
-          <input type="email" id="login-email" placeholder="Enter your email address" required autocomplete="email" />
+          <label for="login-email">Email Address</label>
+          <input type="email" id="login-email" placeholder="Enter your email" required autocomplete="email" />
         </div>
         <div class="form-group">
           <label for="login-password">Password</label>
           <input type="password" id="login-password" placeholder="Enter your password" required
             autocomplete="current-password" />
         </div>
-        <button type="submit" class="btn-primary btn-full">Log In</button>
+        <button type="submit" class="btn-primary btn-full" id="login-submit-btn">Log In</button>
         <p id="login-message" class="form-message" aria-live="polite"></p>
       </form>
 
-      <!-- Register form -->
+      <!-- Register form (Built from scratch) -->
       <form class="auth-form hidden" id="register-form">
         <div class="form-group">
-          <label for="register-email">Email</label>
-          <input type="email" id="register-email" placeholder="Enter your email address" required
-            autocomplete="email" />
+          <label for="register-account-name">Account Name</label>
+          <input type="text" id="register-account-name" placeholder="Choose a display name" required
+            autocomplete="username" />
         </div>
         <div class="form-group">
-          <label for="register-username">Display Username</label>
-          <input type="text" id="register-username" placeholder="Choose a username" required autocomplete="username" />
+          <label for="register-email">Email Address</label>
+          <input type="email" id="register-email" placeholder="Enter your valid email" required autocomplete="email" />
         </div>
         <div class="form-group">
           <label for="register-password">Password</label>
-          <input type="password" id="register-password" placeholder="Create a password" required
+          <input type="password" id="register-password" placeholder="Create a password (min 8 chars)" required
             autocomplete="new-password" />
         </div>
         <div class="form-group">
           <label for="register-confirm">Confirm Password</label>
-          <input type="password" id="register-confirm" placeholder="Confirm your password" required
+          <input type="password" id="register-confirm" placeholder="Type your password again" required
             autocomplete="new-password" />
         </div>
-        <button type="submit" class="btn-primary btn-full">Create Account</button>
+        <button type="submit" class="btn-primary btn-full" id="register-submit-btn">Create Account</button>
         <p id="register-message" class="form-message" aria-live="polite"></p>
       </form>
     </div>
