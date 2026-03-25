@@ -187,6 +187,11 @@ registerForm.addEventListener("submit", async (e) => {
     await supabaseClient.from('profiles').insert({ id: data.user.id, username: username });
   }
 
+  if (!data.session) {
+    showMsg(registerMessage, "success", "Account created! Please check your email to confirm your registration before logging in.");
+    return;
+  }
+
   currentUser = username;
   userData = { trees: [] };
   welcomeNameEl.textContent = username;
@@ -251,6 +256,11 @@ newTreeForm.addEventListener("submit", async (e) => {
   if (!familyName) { showMsg(newTreeMessage, "error", "Please enter the family surname."); return; }
 
   const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) {
+    alert("Authentication error: You are not fully logged in. If you just registered, you may need to click the confirmation link in your email first.");
+    window.location.reload();
+    return;
+  }
 
   const tree = {
     id: uuidv4(),
