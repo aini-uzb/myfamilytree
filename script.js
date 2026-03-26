@@ -4,8 +4,8 @@
 
 let supabaseClient = null;
 try {
-  const supabaseUrl = 'https://ahqhqyevzqpjnaoqnfoj.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFocWhxeWV2enFwam5hb3FuZm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjIzNzgsImV4cCI6MjA5MDAzODM3OH0.de8h1RR3ATHyEJtM89ZOZfvpAeEhTXuk4CcPKgors6Q';
+  const supabaseUrl = 'https://gqmoehapjfuewefjezrw.supabase.co';
+  const supabaseKey = 'sb_publishable_rFnHUuurlO-9MYhOI-wr4g_GkK7yYWe';
   supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 } catch (e) {
   console.error("Supabase failed to load. Are you opening index.html directly from your folders instead of localhost?", e);
@@ -92,6 +92,7 @@ const modalTitle = $("modal-title");
 // Search Bar
 const treeSearchInput = $("tree-search-input");
 const treeSearchBtn = $("tree-search-btn");
+const addMemberBtn = $("add-member-btn");
 
 const personPanel = $("person-panel");
 const backToTreeBtn = $("back-to-tree");
@@ -107,6 +108,22 @@ const infoFullnameEl = $("info-fullname");
 const infoGenderEl = $("info-gender");
 const infoAgeEl = $("info-age");
 const infoAdditionalEl = $("info-additional");
+const deleteMemberBtn = $("delete-member-btn");
+
+// Dashboard language switcher
+const dashLangSwitcher = $("dash-lang-switcher");
+const dashLangToggle = $("dash-lang-toggle");
+const dashLangDropdown = $("dash-lang-dropdown");
+
+// Add-step modal (from '+' button)
+const addStepOverlay = $("add-step-overlay");
+const addStepClose = $("add-step-close");
+const addStep1 = $("add-step-1");
+const addStep2 = $("add-step-2");
+const stepAddChild = $("step-add-child");
+const stepAddSpouse = $("step-add-spouse");
+const stepMemberSelect = $("step-member-select");
+const stepConfirm = $("step-confirm");
 
 // ==================== App State ====================
 
@@ -160,26 +177,19 @@ tabRegister.addEventListener("click", () => {
 registerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = $("register-email").value.trim();
-  const username = $("register-account-name").value.trim();
   const password = $("register-password").value;
-  const confirm = $("register-confirm").value;
 
   if (!email) { showMsg(registerMessage, "error", "Email is required."); return; }
-  if (!username) { showMsg(registerMessage, "error", "Account Name is required."); return; }
-  if (username.length < 3) { showMsg(registerMessage, "error", "Account Name must be at least 3 characters."); return; }
   if (!password) { showMsg(registerMessage, "error", "Password is required."); return; }
-  if (password.length < 8) { showMsg(registerMessage, "error", "Password must be at least 8 characters."); return; }
-  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
-    showMsg(registerMessage, "error", "Password must be a combination of letters and numbers.");
+  if (password.length < 6) {
+    showMsg(registerMessage, "error", "Password must be at least 6 characters.");
     return;
   }
-  if (password !== confirm) { showMsg(registerMessage, "error", "Passwords do not match."); return; }
 
-  // Pass username via metadata so the DB trigger auto-creates the profile row
+  // Simple registration: email + password
   const { data, error } = await supabaseClient.auth.signUp({
     email,
-    password,
-    options: { data: { username: username } }
+    password
   });
 
   if (error) {
@@ -187,17 +197,18 @@ registerForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  if (!data.session) {
-    // Email confirmation is ON — user must click the link in their email first
-    showMsg(registerMessage, "success", "Account created! Please check your email to confirm your registration, then log in.");
+  // Immediately log in after successful signup to keep UX simple
+  const { error: loginAfterRegisterError } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (loginAfterRegisterError) {
+    showMsg(registerMessage, "success", "Account created. Please log in.");
+    registerForm.reset();
+    tabLogin.click();
     return;
   }
 
-  // Email confirmation is OFF — user is logged in immediately
-  currentUser = username;
-  userData = { trees: [] };
-  welcomeNameEl.textContent = username;
-  showPage(welcomePage);
+  currentUser = email.split("@")[0];
+  await fetchUserData();
+  enterDashboard();
   registerForm.reset();
 });
 
@@ -474,8 +485,7 @@ function populateMemberSelect(selectEl, options) {
 }
 
 function populateAddFormSelects() {
-  populateMemberSelect(addParentSelect, { noneLabel: "No parent (new root)" });
-  populateMemberSelect(addSpouseSelect, { noneLabel: "No spouse" });
+  // Current add flow is modal-driven (child/spouse/root), so no persistent add selects to populate.
 }
 
 function populatePersonFormSelects(personId) {
@@ -676,6 +686,61 @@ modalCloseBtn.addEventListener("click", () => {
   addModalOverlay.classList.add("hidden");
 });
 
+// ==================== + Button -> Step modal flow ====================
+
+function resetAddStepModal() {
+  addStep1.classList.remove("hidden");
+  addStep2.classList.add("hidden");
+  stepMemberSelect.innerHTML = "";
+  addStepOverlay.dataset.actionType = "";
+}
+
+function openAddStepModal() {
+  resetAddStepModal();
+  addStepOverlay.classList.remove("hidden");
+}
+
+addMemberBtn.addEventListener("click", () => {
+  openAddStepModal();
+});
+
+addStepClose.addEventListener("click", () => {
+  addStepOverlay.classList.add("hidden");
+});
+
+function openStepTwo(actionType) {
+  const members = getMembers();
+  if (members.length === 0) {
+    addStepOverlay.classList.add("hidden");
+    openAddModal("root", null);
+    modalTitle.textContent = "Add First Family Member";
+    return;
+  }
+
+  addStepOverlay.dataset.actionType = actionType;
+  stepMemberSelect.innerHTML = "";
+  members.forEach((m) => {
+    const opt = document.createElement("option");
+    opt.value = String(m.id);
+    opt.textContent = m.fullName || m.name || "Unknown";
+    stepMemberSelect.appendChild(opt);
+  });
+
+  addStep1.classList.add("hidden");
+  addStep2.classList.remove("hidden");
+}
+
+stepAddChild.addEventListener("click", () => openStepTwo("child"));
+stepAddSpouse.addEventListener("click", () => openStepTwo("spouse"));
+
+stepConfirm.addEventListener("click", () => {
+  const actionType = addStepOverlay.dataset.actionType;
+  const targetId = stepMemberSelect.value;
+  if (!actionType || !targetId) return;
+  addStepOverlay.classList.add("hidden");
+  openAddModal(actionType, targetId);
+});
+
 // Calculate age relative to current year
 function calculateAge(birthYear) {
   if (!birthYear) return null;
@@ -738,24 +803,20 @@ function handleSearch() {
   // Clear existing highlights
   document.querySelectorAll(".highlight-glow").forEach(el => el.classList.remove("highlight-glow"));
 
+  // Strict behavior: empty query returns empty result
   if (!query) return;
 
   const tree = getActiveTree();
   if (!tree) return;
 
-  // First pass: try matching just their specific full name (ignoring family surname)
-  let matches = tree.members.filter(m => {
-    const specificName = (m.fullName || m.name || "").toLowerCase();
-    return specificName.includes(query);
+  // Strict prefix-only matching (case-insensitive + trimmed)
+  const matches = [];
+  tree.members.forEach((m) => {
+    const normalizedName = (m.fullName || m.name || "").trim().toLowerCase();
+    if (normalizedName.startsWith(query)) {
+      matches.push(m);
+    }
   });
-
-  // Second pass fallback: if no matches, or if the user is explicitly searching a surname, include the global surname
-  if (matches.length === 0) {
-    matches = tree.members.filter(m => {
-      const fullWithSurname = getFullName(m, tree).toLowerCase();
-      return fullWithSurname.includes(query);
-    });
-  }
 
   if (matches.length === 0) {
     alert("No family member found");
@@ -1199,6 +1260,32 @@ personFormEl.addEventListener("submit", (e) => {
   showMsg(personMessage, "success", "Saved.");
 });
 
+deleteMemberBtn.addEventListener("click", async () => {
+  if (activePersonId == null) return;
+  const member = getMemberById(activePersonId);
+  const tree = getActiveTree();
+  if (!member || !tree) return;
+
+  const hasChildren = tree.members.some(m => m.parentId === member.id);
+  if (hasChildren) {
+    showMsg(personMessage, "error", "You cannot delete a member who has children.");
+    return;
+  }
+
+  const memberName = member.fullName || member.name || "Unknown";
+  if (!confirm(`Delete "${memberName}"? This cannot be undone.`)) return;
+
+  await supabaseClient.from('members').delete().eq('id', member.id);
+
+  clearSpouse(member.id);
+  const idx = tree.members.findIndex(m => m.id === member.id);
+  if (idx !== -1) tree.members.splice(idx, 1);
+
+  activePersonId = null;
+  showDashboardView("tree");
+  renderTree();
+});
+
 // ==================== Spouse Helpers ====================
 
 function clearSpouse(memberId) {
@@ -1510,3 +1597,118 @@ async function fetchUserData() {
     showPage(authPage);
   }
 })();
+
+// ==================== Language Switcher ====================
+
+const i18n = {
+  en: {
+    logIn: "Log In",
+    register: "Register",
+    emailAddress: "Email Address",
+    password: "Password",
+    createAccount: "Create Account",
+    trees: "Trees",
+    newTree: "+ New Tree",
+    logOut: "Log out",
+    familyTree: "Family Tree",
+    search: "Search",
+    addChild: "Add Child",
+    addSpouse: "Add Spouse",
+    personDetails: "Person Details",
+    backToTree: "← Back to tree"
+  },
+  ru: {
+    logIn: "Войти",
+    register: "Регистрация",
+    emailAddress: "Эл. почта",
+    password: "Пароль",
+    createAccount: "Создать аккаунт",
+    trees: "Деревья",
+    newTree: "+ Новое дерево",
+    logOut: "Выйти",
+    familyTree: "Семейное дерево",
+    search: "Поиск",
+    addChild: "Добавить ребенка",
+    addSpouse: "Добавить супруга",
+    personDetails: "Данные человека",
+    backToTree: "← Назад к дереву"
+  },
+  uz: {
+    logIn: "Kirish",
+    register: "Ro'yxatdan o'tish",
+    emailAddress: "Email manzil",
+    password: "Parol",
+    createAccount: "Hisob yaratish",
+    trees: "Daraxtlar",
+    newTree: "+ Yangi daraxt",
+    logOut: "Chiqish",
+    familyTree: "Oila daraxti",
+    search: "Qidirish",
+    addChild: "Farzand qo'shish",
+    addSpouse: "Turmush o'rtog'ini qo'shish",
+    personDetails: "Shaxs ma'lumotlari",
+    backToTree: "← Daraxtga qaytish"
+  },
+  tj: {
+    logIn: "Ворид шудан",
+    register: "Бақайдгирӣ",
+    emailAddress: "Почтаи электронӣ",
+    password: "Рамз",
+    createAccount: "Эҷоди ҳисоб",
+    trees: "Дарахтҳо",
+    newTree: "+ Дарахти нав",
+    logOut: "Баромадан",
+    familyTree: "Дарахти оила",
+    search: "Ҷустуҷӯ",
+    addChild: "Иловаи фарзанд",
+    addSpouse: "Иловаи ҳамсар",
+    personDetails: "Маълумоти шахс",
+    backToTree: "← Бозгашт ба дарахт"
+  }
+};
+
+function applyLanguage(lang) {
+  const dict = i18n[lang] || i18n.en;
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    if (key && dict[key]) el.textContent = dict[key];
+  });
+
+  const labels = {
+    en: "🌐 English",
+    ru: "🌐 🇷🇺 Russian",
+    uz: "🌐 🇺🇿 Uzbek",
+    tj: "🌐 🇹🇯 Tajik"
+  };
+  dashLangToggle.textContent = labels[lang] || labels.en;
+  localStorage.setItem("familyTreeLang", lang);
+}
+
+dashLangToggle.addEventListener("click", (e) => {
+  e.stopPropagation();
+  dashLangDropdown.classList.toggle("hidden");
+});
+
+if (dashLangSwitcher) {
+  dashLangSwitcher.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    const option = target.closest(".lang-option");
+    if (!option) return;
+    const lang = option.getAttribute("data-lang");
+    if (!lang) return;
+    applyLanguage(lang);
+    dashLangDropdown.classList.add("hidden");
+  });
+}
+
+document.addEventListener("click", () => {
+  dashLangDropdown.classList.add("hidden");
+});
+
+addStepOverlay.addEventListener("click", (e) => {
+  if (e.target === addStepOverlay) addStepOverlay.classList.add("hidden");
+});
+
+const savedLang = localStorage.getItem("familyTreeLang") || "en";
+applyLanguage(savedLang);
