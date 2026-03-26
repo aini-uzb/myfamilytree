@@ -175,23 +175,25 @@ registerForm.addEventListener("submit", async (e) => {
   }
   if (password !== confirm) { showMsg(registerMessage, "error", "Passwords do not match."); return; }
 
-  const { data, error } = await supabaseClient.auth.signUp({ email, password });
+  // Pass username via metadata so the DB trigger auto-creates the profile row
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: { data: { username: username } }
+  });
 
   if (error) {
     showMsg(registerMessage, "error", error.message);
     return;
   }
 
-  // Insert into profiles
-  if (data.user) {
-    await supabaseClient.from('profiles').insert({ id: data.user.id, username: username });
-  }
-
   if (!data.session) {
-    showMsg(registerMessage, "success", "Account created! Please check your email to confirm your registration before logging in.");
+    // Email confirmation is ON — user must click the link in their email first
+    showMsg(registerMessage, "success", "Account created! Please check your email to confirm your registration, then log in.");
     return;
   }
 
+  // Email confirmation is OFF — user is logged in immediately
   currentUser = username;
   userData = { trees: [] };
   welcomeNameEl.textContent = username;
