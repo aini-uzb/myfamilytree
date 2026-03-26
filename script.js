@@ -270,11 +270,12 @@ newTreeForm.addEventListener("submit", async (e) => {
   };
 
   // Push physical tree to Supabase
-  await supabaseClient.from('trees').insert({
+  const { error } = await supabaseClient.from('trees').insert({
     id: tree.id,
     user_id: user.id,
-    family_name: `${name}|||${familyName}` // Serialized to bypass strict schema constraints
+    family_name: `${name}|||${familyName}`
   });
+  if (error) { console.error('Tree insert error:', error); alert('Error saving tree: ' + error.message); return; }
 
   userData.trees.push(tree);
 
@@ -427,7 +428,8 @@ async function autoSave() {
   }));
 
   if (payloads.length > 0) {
-    await supabaseClient.from('members').upsert(payloads);
+    const { error } = await supabaseClient.from('members').upsert(payloads);
+    if (error) console.error('autoSave upsert error:', error);
   }
 }
 
@@ -678,7 +680,7 @@ function calculateAge(birthYear) {
   return new Date().getFullYear() - birthYear;
 }
 
-addFormEl.addEventListener("submit", (e) => {
+addFormEl.addEventListener("submit", async (e) => {
   e.preventDefault();
   const tree = getActiveTree();
   if (!tree) return;
@@ -686,7 +688,7 @@ addFormEl.addEventListener("submit", (e) => {
   const fullName = addNameInput.value.trim();
   const gender = addGenderSelect.value === "female" ? "female" : "male";
   const actionType = modalActionType.value;
-  const targetId = Number(modalTargetId.value) || null; // Could be null for first root member
+  const targetId = modalTargetId.value || null; // UUID string, NOT Number
 
   if (!fullName) { showMsg(addFormMessage, "error", "Please enter a full name."); return; }
 
@@ -702,7 +704,7 @@ addFormEl.addEventListener("submit", (e) => {
   }
 
   const newMember = {
-    id: tree.nextMemberId++,
+    id: uuidv4(),
     fullName: fullName,
     birthday: null,
     birthYear: null,
