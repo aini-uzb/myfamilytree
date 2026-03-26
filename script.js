@@ -496,7 +496,7 @@ treeRootEl.addEventListener("contextmenu", (e) => {
 
   e.preventDefault();
 
-  const id = Number(card.dataset.memberId);
+  const id = card.dataset.memberId;
   if (!id) return;
 
   // Position the menu
