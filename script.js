@@ -12,27 +12,6 @@ try {
   setTimeout(() => alert("Error: Database connection blocked! Please open this site using http://localhost:3000 to unblock the database."), 1000);
 }
 
-// ==================== Auth State Listener (Persistence) ====================
-
-supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-    if (session) {
-      // Pull the username from profiles to display on the dashboard
-      const { data: profile } = await supabaseClient.from('profiles').select('username').eq('id', session.user.id).single();
-      currentUser = profile ? profile.username : session.user.email.split('@')[0];
-      
-      await fetchUserData();
-      enterDashboard();
-    }
-  } else if (event === 'SIGNED_OUT') {
-    currentUser = null;
-    userData = null;
-    activeTreeId = null;
-    activePersonId = null;
-    showPage(authPage);
-  }
-});
-
 // ==================== Utility ====================
 
 function $(id) { return document.getElementById(id); }
@@ -159,6 +138,37 @@ let currentZoom = 1.0;     // scale factor for the tree canvas
 /** @type {"child" | "spouse" | null} */
 let pendingAddRelation = null;
 
+// ==================== Auth Persistence ====================
+
+async function checkSession() {
+  const { data: { session }, error } = await supabaseClient.auth.getSession();
+  if (error) {
+    console.error("Auth session check error:", error.message);
+    return;
+  }
+
+  if (session) {
+    const { data: profile } = await supabaseClient.from('profiles').select('username').eq('id', session.user.id).single();
+    currentUser = profile ? profile.username : session.user.email.split('@')[0];
+    await fetchUserData();
+    enterDashboard();
+  }
+}
+
+// Initial session check
+checkSession();
+
+// Listen for auth state changes (e.g., sign out from another tab)
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    userData = null;
+    activeTreeId = null;
+    activePersonId = null;
+    showPage(authPage);
+  }
+});
+
 // ==================== Page Switching ====================
 
 function showPage(page) {
@@ -231,7 +241,9 @@ registerForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  // Dashboard entry now handled by onAuthStateChange
+  currentUser = email.split("@")[0];
+  await fetchUserData();
+  enterDashboard();
   registerForm.reset();
 });
 
@@ -251,14 +263,25 @@ loginForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  // Dashboard entry now handled by onAuthStateChange
+  // Pull the username from profiles to display on the dashboard
+  const { data: profile } = await supabaseClient.from('profiles').select('username').eq('id', data.user.id).single();
+  currentUser = profile ? profile.username : email.split('@')[0];
+
   loginForm.reset();
+
+  await fetchUserData();
+  enterDashboard();
 });
 
 // ==================== Logout ====================
 
 sidebarLogout.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
+  currentUser = null;
+  userData = null;
+  activeTreeId = null;
+  activePersonId = null;
+  showPage(authPage);
 });
 
 // ==================== Welcome Page ====================
