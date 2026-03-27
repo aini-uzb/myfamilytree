@@ -12,6 +12,27 @@ try {
   setTimeout(() => alert("Error: Database connection blocked! Please open this site using http://localhost:3000 to unblock the database."), 1000);
 }
 
+// ==================== Auth State Listener (Persistence) ====================
+
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+    if (session) {
+      // Pull the username from profiles to display on the dashboard
+      const { data: profile } = await supabaseClient.from('profiles').select('username').eq('id', session.user.id).single();
+      currentUser = profile ? profile.username : session.user.email.split('@')[0];
+      
+      await fetchUserData();
+      enterDashboard();
+    }
+  } else if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    userData = null;
+    activeTreeId = null;
+    activePersonId = null;
+    showPage(authPage);
+  }
+});
+
 // ==================== Utility ====================
 
 function $(id) { return document.getElementById(id); }
@@ -210,9 +231,7 @@ registerForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  currentUser = email.split("@")[0];
-  await fetchUserData();
-  enterDashboard();
+  // Dashboard entry now handled by onAuthStateChange
   registerForm.reset();
 });
 
@@ -232,25 +251,14 @@ loginForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  // Pull the username from profiles to display on the dashboard
-  const { data: profile } = await supabaseClient.from('profiles').select('username').eq('id', data.user.id).single();
-  currentUser = profile ? profile.username : email.split('@')[0];
-
+  // Dashboard entry now handled by onAuthStateChange
   loginForm.reset();
-
-  await fetchUserData();
-  enterDashboard();
 });
 
 // ==================== Logout ====================
 
 sidebarLogout.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
-  currentUser = null;
-  userData = null;
-  activeTreeId = null;
-  activePersonId = null;
-  showPage(authPage);
 });
 
 // ==================== Welcome Page ====================
