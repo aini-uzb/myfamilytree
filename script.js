@@ -122,8 +122,7 @@ const addStep1 = $("add-step-1");
 const addStep2 = $("add-step-2");
 const stepAddChild = $("step-add-child");
 const stepAddSpouse = $("step-add-spouse");
-const stepMemberSelect = $("step-member-select");
-const stepConfirm = $("step-confirm");
+const addStepInstructionEl = $("add-step-instruction");
 
 // ==================== App State ====================
 
@@ -133,6 +132,11 @@ let activeTreeId = null;   // currently selected tree id
 let activePersonId = null;  // currently viewed person id
 let drawRaf = 0;
 let currentZoom = 1.0;     // scale factor for the tree canvas
+
+// Used by "+ Add Member" step modal:
+// When not null, the next click on a `.member-card` should open the add-member modal.
+/** @type {"child" | "spouse" | null} */
+let pendingAddRelation = null;
 
 // ==================== Page Switching ====================
 
@@ -270,7 +274,7 @@ newTreeForm.addEventListener("submit", async (e) => {
 
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) {
-    alert("Authentication error: You are not fully logged in. If you just registered, you may need to click the confirmation link in your email first.");
+    alert("Authentication error: You are not fully logged in. Please log in again.");
     window.location.reload();
     return;
   }
@@ -691,8 +695,13 @@ modalCloseBtn.addEventListener("click", () => {
 function resetAddStepModal() {
   addStep1.classList.remove("hidden");
   addStep2.classList.add("hidden");
-  stepMemberSelect.innerHTML = "";
+  addStepOverlay.classList.remove("step-2-active"); // Remove the tip panel class
   addStepOverlay.dataset.actionType = "";
+  pendingAddRelation = null;
+  // Keep instruction generic; we'll set it when opening step 2.
+  if (addStepInstructionEl) {
+    addStepInstructionEl.textContent = "Now click a member on the tree.";
+  }
 }
 
 function openAddStepModal() {
@@ -705,6 +714,7 @@ addMemberBtn.addEventListener("click", () => {
 });
 
 addStepClose.addEventListener("click", () => {
+  resetAddStepModal();
   addStepOverlay.classList.add("hidden");
 });
 
@@ -718,13 +728,16 @@ function openStepTwo(actionType) {
   }
 
   addStepOverlay.dataset.actionType = actionType;
-  stepMemberSelect.innerHTML = "";
-  members.forEach((m) => {
-    const opt = document.createElement("option");
-    opt.value = String(m.id);
-    opt.textContent = m.fullName || m.name || "Unknown";
-    stepMemberSelect.appendChild(opt);
-  });
+  pendingAddRelation = actionType;
+
+  // Add the class that transforms the modal into a top-center tip
+  addStepOverlay.classList.add("step-2-active");
+
+  if (addStepInstructionEl) {
+    const actionLabel = actionType === "child" ? "child" : "spouse";
+    // Using user-requested language
+    addStepInstructionEl.textContent = `Choose a member to add a ${actionLabel} to.`;
+  }
 
   addStep1.classList.add("hidden");
   addStep2.classList.remove("hidden");
@@ -732,14 +745,6 @@ function openStepTwo(actionType) {
 
 stepAddChild.addEventListener("click", () => openStepTwo("child"));
 stepAddSpouse.addEventListener("click", () => openStepTwo("spouse"));
-
-stepConfirm.addEventListener("click", () => {
-  const actionType = addStepOverlay.dataset.actionType;
-  const targetId = stepMemberSelect.value;
-  if (!actionType || !targetId) return;
-  addStepOverlay.classList.add("hidden");
-  openAddModal(actionType, targetId);
-});
 
 // Calculate age relative to current year
 function calculateAge(birthYear) {
@@ -1070,6 +1075,18 @@ treeRootEl.addEventListener("click", (e) => {
   if (!card) return;
   const id = card.dataset.memberId;
   if (!id) return;
+
+  // "+ Add Member" step mode: instead of opening person page,
+  // pick the clicked member as the target for the add-member modal.
+  if (pendingAddRelation) {
+    const actionType = pendingAddRelation;
+    pendingAddRelation = null;
+    addStepOverlay.classList.add("hidden");
+    addStepOverlay.dataset.actionType = "";
+    openAddModal(actionType, id);
+    return;
+  }
+
   openPerson(id);
 });
 
@@ -1080,6 +1097,16 @@ treeRootEl.addEventListener("keydown", (e) => {
   const card = target.closest(".member-card");
   if (!card) return;
   e.preventDefault();
+
+  if (pendingAddRelation) {
+    const actionType = pendingAddRelation;
+    pendingAddRelation = null;
+    addStepOverlay.classList.add("hidden");
+    addStepOverlay.dataset.actionType = "";
+    openAddModal(actionType, card.dataset.memberId);
+    return;
+  }
+
   openPerson(card.dataset.memberId);
 });
 
@@ -1707,7 +1734,11 @@ document.addEventListener("click", () => {
 });
 
 addStepOverlay.addEventListener("click", (e) => {
-  if (e.target === addStepOverlay) addStepOverlay.classList.add("hidden");
+  if (e.target === addStepOverlay) {
+    addStepOverlay.classList.add("hidden");
+    pendingAddRelation = null;
+    addStepOverlay.dataset.actionType = "";
+  }
 });
 
 const savedLang = localStorage.getItem("familyTreeLang") || "en";

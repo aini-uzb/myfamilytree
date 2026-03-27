@@ -173,7 +173,10 @@
             <div class="search-bar-container">
               <input type="text" id="tree-search-input" class="search-input" placeholder="Search by name..." />
               <button type="button" class="btn-secondary" id="tree-search-btn" data-i18n="search">Search</button>
-              <button type="button" class="btn-add-member" id="add-member-btn" title="Add new member">&#xFF0B;</button>
+              <button type="button" class="btn-add-member" id="add-member-btn" title="Add new member">
+                <span class="btn-add-member-plus" aria-hidden="true">&#xFF0B;</span>
+                <span class="btn-add-member-text">Add Member</span>
+              </button>
             </div>
 
             <div class="tree-scroll" id="tree-scroll">
@@ -322,10 +325,7 @@
           Spouse</button>
       </div>
       <div id="add-step-2" class="hidden">
-        <p style="margin-bottom: 14px; color: var(--text-muted);" data-i18n="selectMember">Select a member:</p>
-        <select id="step-member-select" class="step-select"
-          style="width:100%; padding:10px; margin-bottom:14px;"></select>
-        <button type="button" class="btn-primary btn-full" id="step-confirm" data-i18n="confirm">Confirm</button>
+        <p style="margin: 0; color: var(--text-main); font-weight: 500;" id="add-step-instruction">Choose a member to add a relative to.</p>
       </div>
     </div>
   </div>

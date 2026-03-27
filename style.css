@@ -978,6 +978,10 @@ body {
     min-width: 100px;
     padding: 8px 10px;
   }
+
+  .btn-add-member-text {
+    display: none;
+  }
 }
 
 @media (max-width: 839px) {
@@ -1114,11 +1118,49 @@ body {
   display: none;
 }
 
+/* "+ Add Member" step overlay: allow clicking the tree behind it. */
+#add-step-overlay {
+  pointer-events: none;
+}
+
+#add-step-overlay .modal-content {
+  pointer-events: auto;
+}
+
 .modal-content {
   position: relative;
   width: 100%;
   max-width: 400px;
   padding: 24px;
+}
+
+/* Step 2 Top Tip Mode */
+.modal-overlay.step-2-active {
+  background: transparent;
+  backdrop-filter: none;
+  align-items: flex-start;
+  padding-top: 40px;
+  pointer-events: none;
+}
+
+.modal-overlay.step-2-active .modal-content {
+  max-width: fit-content;
+  min-width: 300px;
+  padding: 16px 48px 16px 20px;
+  border: 2px solid var(--accent);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+}
+
+.modal-overlay.step-2-active #add-step-title {
+  display: none;
+}
+
+.modal-overlay.step-2-active .modal-close {
+  top: 12px;
+  right: 12px;
 }
 
 .modal-close {
@@ -1204,20 +1246,32 @@ body {
 /* ========== + Add Member Button ========== */
 
 .btn-add-member {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
+  width: auto;
+  height: auto;
+  border-radius: var(--radius-pill);
   border: 2px solid var(--accent);
   background: var(--accent-soft);
   color: var(--accent-light);
-  font-size: 1.4rem;
+  font-size: 0.95rem;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
+  padding: 10px 14px;
   transition: all var(--transition-fast);
   flex-shrink: 0;
   line-height: 1;
+}
+
+.btn-add-member-plus {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.btn-add-member-text {
+  font-weight: 800;
+  letter-spacing: 0.01em;
 }
 
 .btn-add-member:hover {
