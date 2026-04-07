@@ -52,6 +52,9 @@
           <input type="password" id="login-password" placeholder="Enter your password" required
             autocomplete="current-password" />
         </div>
+        <div class="forgot-link-row">
+          <button type="button" class="forgot-link" id="forgot-password-btn" data-i18n="forgotPassword">Forgot password?</button>
+        </div>
         <button type="submit" class="btn-primary btn-full" id="login-submit-btn" data-i18n="logIn">Log In</button>
         <p id="login-message" class="form-message" aria-live="polite"></p>
       </form>
@@ -286,6 +289,25 @@
     <button class="menu-item danger" id="menu-delete-tree" data-i18n="deleteTree">Delete Tree</button>
   </div>
 
+  <!-- ==================== FORGOT PASSWORD MODAL ==================== -->
+  <div id="forgot-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="forgot-modal-title">
+    <div class="modal-content card" style="max-width: 400px;">
+      <h2 id="forgot-modal-title" data-i18n="resetPassword">Reset Password</h2>
+      <button type="button" class="modal-close" id="forgot-close-btn" aria-label="Close">&times;</button>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0 0 18px;" data-i18n="resetPasswordHint">
+        Enter your email address and we will send you a link to reset your password.
+      </p>
+      <form id="forgot-form" class="form">
+        <div class="form-group">
+          <label for="forgot-email" data-i18n="emailAddress">Email Address</label>
+          <input type="email" id="forgot-email" placeholder="Enter your email" required autocomplete="email" />
+        </div>
+        <button type="submit" class="btn-primary btn-full" id="forgot-submit-btn" data-i18n="sendResetLink">Send Reset Link</button>
+        <p id="forgot-message" class="form-message" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
   <!-- ==================== ADD MEMBER MODAL ==================== -->
   <div id="add-modal-overlay" class="modal-overlay hidden">
     <div class="modal-content card">
@@ -330,7 +352,7 @@
     </div>
   </div>
 
-  <script src="script.js?v=8"></script>
+  <script src="script.js?v=9"></script>
 </body>
 
 </html>
